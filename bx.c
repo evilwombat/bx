@@ -28,6 +28,37 @@ void show_help(const char *name)
     printf("%s input_file offset length output_file\n", name);
     printf("\toffset and length are in bytes, and a prefix of 0x means hex\n");
     printf("\tA length of + means dump from offset to end of input file\n");
+    printf("\tOffset and length may end in 'K', 'M', or 'G', for the corresponding\n");
+    printf("\tmultiple of 1024 (case insensitive)\n");
+}
+
+ssize_t parse_size(const char *val)
+{
+    ssize_t ret = 0;
+    char suffix = 0;
+    if (!val)
+        return 0;
+
+    ret = strtol(val, NULL, 0);
+
+    suffix = val[strlen(val) - 1];
+
+    /* It's prettier with a fall-through, but less understandable */
+    switch(suffix) {
+        case 'k':
+        case 'K':
+            return ret * 1024;
+
+        case 'm':
+        case 'M':
+            return ret * 1024 * 1024;
+
+        case 'g':
+        case 'G':
+            return ret * 1024 * 1024 * 1024;
+    }
+
+    return ret;
 }
 
 int main(int argc, char **argv)
@@ -48,7 +79,7 @@ int main(int argc, char **argv)
     }
 
     input_filename = argv[1];
-    offset = strtol(argv[2], NULL, 0);
+    offset = parse_size(argv[2]);
     output_filename = argv[4];
 
     if (stat(input_filename, &st)) {
@@ -64,7 +95,7 @@ int main(int argc, char **argv)
 
 
     if (strcmp(argv[3], "+") != 0) {
-        length = strtol(argv[3], NULL, 0);
+        length = parse_size(argv[3]);
     } else {
         length = st.st_size - offset;
     }
